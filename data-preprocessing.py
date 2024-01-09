@@ -56,20 +56,17 @@ def preprocess_data(dataframe):
     set_config(transform_output="pandas")
     wnl = WordNetLemmatizer()
 
-    # Get English stop words from TfidfVectorizer as a list
-    stop_words = list(TfidfVectorizer(stop_words='english').get_stop_words())
-
     # Tokenization and lemmatization function
     def tokenize(doc):
         document = doc.lower()
         document = re.sub(r'\d+', '', document)
         document = document.translate(str.maketrans('', '', string.punctuation))
         document = document.strip()
-        return [wnl.lemmatize(token) for token in word_tokenize(document) if token not in stop_words]
+        return [wnl.lemmatize(token) for token in word_tokenize(document)]
 
     # Create a pipeline for text preprocessing
     preprocessor = Pipeline([
-        ('tfidf', TfidfVectorizer(tokenizer=tokenize, stop_words=stop_words, token_pattern=None)),
+        ('tfidf', TfidfVectorizer(tokenizer=tokenize, stop_words='english', token_pattern=None)),
     ])
 
     # Transform the text data using TF-IDF
