@@ -8,7 +8,10 @@ from nltk import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from sklearn import set_config
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, \
+    precision_recall_fscore_support
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -81,16 +84,44 @@ def preprocess_data(dataframe):
 
 
 def train_decision_tree(X_train, y_train):
-    # Train a decision tree classifier
-    DTClass = DecisionTreeClassifier(criterion="gini", splitter="best", random_state=42)
-    DTClass.fit(X_train, y_train)
-    return DTClass
+    # Define the parameter grid for hyperparameter tuning
+    param_grid = {
+        'criterion': ['gini', 'entropy'],
+        'splitter': ['best', 'random'],
+        'max_depth': [None, 10, 20, 30, 40, 50],
+    }
+
+    # Create a decision tree classifier
+    DTClass = DecisionTreeClassifier(random_state=42)
+
+    # Use GridSearchCV with cross-validation to find the best hyperparameters
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    grid_search = GridSearchCV(DTClass, param_grid, cv=cv, scoring='accuracy')
+    grid_search.fit(X_train, y_train)
+
+    # Get the best model from the grid search
+    best_DTClass = grid_search.best_estimator_
+
+    print("Best Decision Tree Hyperparameters:", grid_search.best_params_)
+    print("Decision Tree Cross-Validation Mean Accuracy:", grid_search.best_score_)
+
+    return best_DTClass
 
 
 def train_naive_bayes(X_train, y_train):
-    # Train a Naive Bayes classifier
+    # Define the naive bayes classifier
     NBClass = MultinomialNB()
+
+    # Use cross-validation to evaluate the model
+    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
+    scores = cross_val_score(NBClass, X_train, y_train, cv=cv, scoring='accuracy')
+
+    # Train the final model on the entire training set
     NBClass.fit(X_train, y_train)
+
+    print("Naive Bayes Cross-Validation Scores:", scores)
+    print("Mean Accuracy:", np.mean(scores))
+
     return NBClass
 
 
@@ -111,26 +142,25 @@ def train_neural_network(X_train, y_train, num_classes, epochs=20, batch_size=64
 
 
 def evaluate_model(model, X_test, y_test):
+    # Initialize y_pred with None
+    y_pred = None
+
     # Evaluate the performance of the model
-    if isinstance(model, DecisionTreeClassifier) or isinstance(model, MultinomialNB):
+    if isinstance(model, (DecisionTreeClassifier, MultinomialNB)):
         y_pred = model.predict(X_test)
-        print(f"Accuracy score of {model.__class__.__name__}: {accuracy_score(y_test, y_pred)}")
-        print(
-            f"Precision score of {model.__class__.__name__}: {precision_score(y_test, y_pred, average='weighted', zero_division=1)}")
-        print(
-            f"Recall score of {model.__class__.__name__}: {recall_score(y_test, y_pred, average='weighted', zero_division=1)}")
-        print(
-            f"F1 score of {model.__class__.__name__}: {f1_score(y_test, y_pred, average='weighted', zero_division=1)}")
     elif isinstance(model, Sequential):
         y_pred = np.argmax(model.predict(X_test), axis=-1)
-        print(f"Accuracy score of {model.__class__.__name__}: {accuracy_score(y_test, y_pred)}")
-        print(
-            f"Precision score of {model.__class__.__name__}: {precision_score(y_test, y_pred, average='weighted', zero_division=1)}")
-        print(
-            f"Recall score of {model.__class__.__name__}: {recall_score(y_test, y_pred, average='weighted', zero_division=1)}")
-        print(
-            f"F1 score of {model.__class__.__name__}: {f1_score(y_test, y_pred, average='weighted', zero_division=1)}")
-        print("\nClassification Report:\n", classification_report(y_test, y_pred, zero_division=1))
+
+    if y_pred is not None:
+        accuracy = accuracy_score(y_test, y_pred)
+        precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='weighted', zero_division=1)
+
+        print(f"Accuracy score of {model.__class__.__name__}: {accuracy}")
+        print(f"Precision score of {model.__class__.__name__}: {precision}")
+        print(f"Recall score of {model.__class__.__name__}: {recall}")
+        print(f"F1 score of {model.__class__.__name__}: {f1}")
+    else:
+        print("Error: y_pred is not initialized.")
 
 
 # Main pipeline
