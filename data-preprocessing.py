@@ -5,11 +5,11 @@ import string
 import numpy as np
 import pandas as pd
 from nltk import word_tokenize
+from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn import set_config
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report, \
-    precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 from sklearn.model_selection import train_test_split
@@ -62,11 +62,11 @@ def preprocess_data(dataframe):
         document = re.sub(r'\d+', '', document)
         document = document.translate(str.maketrans('', '', string.punctuation))
         document = document.strip()
-        return [wnl.lemmatize(token) for token in word_tokenize(document)]
+        return [wnl.lemmatize(token) for token in word_tokenize(document) if token not in stopwords.words('english')]
 
     # Create a pipeline for text preprocessing
     preprocessor = Pipeline([
-        ('tfidf', TfidfVectorizer(tokenizer=tokenize, stop_words='english', token_pattern=None)),
+        ('tfidf', TfidfVectorizer(tokenizer=tokenize, token_pattern=None)),
     ])
 
     # Transform the text data using TF-IDF
