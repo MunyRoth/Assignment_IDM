@@ -10,7 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 csv_file_path = 'dataset.csv'
 
 # Define CSV fieldnames
-fieldnames = ["id", "title", "url", "publisher", "category", "hostname"]
+fieldnames = ["ID", "TITLE", "URL", "PUBLISHER", "CATEGORY", "HOSTNAME"]
 
 # Set up the web driver
 driver = webdriver.Chrome()
@@ -28,7 +28,7 @@ with open(csv_file_path, 'a', newline='') as file:
     for title in title_tags:
         # Generate unique_id
         unique_id = str(uuid.uuid4())
-        title_info = {"id": unique_id, "title": title.text, "url": title.get_attribute('href')}
+        title_info = {"ID": unique_id, "TITLE": title.text, "URL": title.get_attribute('href')}
         titles.append(title_info)
 
     writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -53,9 +53,9 @@ with open(csv_file_path, 'a', newline='') as file:
             )
 
             # Extract additional information and store it in the title_info dictionary
-            title_info['publisher'] = div_tag.text[3:]
-            title_info['category'] = span_tag.text
-            title_info['hostname'] = 'nbcnews.com'
+            title_info['PUBLISHER'] = div_tag.text[3:]
+            title_info['CATEGORY'] = span_tag.text
+            title_info['HOSTNAME'] = 'nbcnews.com'
             print(title_info)
 
             # Write the data rows

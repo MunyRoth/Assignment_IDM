@@ -10,7 +10,7 @@ from selenium.webdriver.common.keys import Keys
 csv_file_path = 'dataset.csv'
 
 # Define CSV fieldnames
-fieldnames = ["id", "title", "url", "publisher", "category", "hostname"]
+fieldnames = ["ID", "TITLE", "URL", "PUBLISHER", "CATEGORY", "HOSTNAME"]
 
 # Set up the web driver
 driver = webdriver.Chrome()
@@ -53,12 +53,12 @@ with open(csv_file_path, 'a', newline='') as file:
 
             # Write the title_info dictionary to the CSV file
             title_info = {
-                "id": unique_id,
-                "title": title_text,
-                "url": url,
-                "publisher": publisher,
-                "category": category,
-                "hostname": hostname
+                "ID": unique_id,
+                "TITLE": title_text,
+                "URL": url,
+                "PUBLISHER": publisher,
+                "CATEGORY": category,
+                "HOSTNAME": hostname
             }
 
             # Write the data rows
