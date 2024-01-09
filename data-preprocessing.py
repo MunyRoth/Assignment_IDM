@@ -5,16 +5,15 @@ import string
 import numpy as np
 import pandas as pd
 from nltk import word_tokenize
-from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn import set_config
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.tree import DecisionTreeClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import LabelEncoder
+from sklearn.tree import DecisionTreeClassifier
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import Adam
@@ -54,17 +53,20 @@ def preprocess_data(dataframe):
     set_config(transform_output="pandas")
     wnl = WordNetLemmatizer()
 
+    # Get English stop words from TfidfVectorizer as a list
+    stop_words = list(TfidfVectorizer(stop_words='english').get_stop_words())
+
     # Tokenization and lemmatization function
     def tokenize(doc):
         document = doc.lower()
         document = re.sub(r'\d+', '', document)
         document = document.translate(str.maketrans('', '', string.punctuation))
         document = document.strip()
-        return [wnl.lemmatize(token) for token in word_tokenize(document) if token not in stopwords.words('english')]
+        return [wnl.lemmatize(token) for token in word_tokenize(document) if token not in stop_words]
 
     # Create a pipeline for text preprocessing
     preprocessor = Pipeline([
-        ('tfidf', TfidfVectorizer(tokenizer=tokenize, stop_words='english', token_pattern=None)),
+        ('tfidf', TfidfVectorizer(tokenizer=tokenize, stop_words=stop_words, token_pattern=None)),
     ])
 
     # Transform the text data using TF-IDF
@@ -128,7 +130,7 @@ def evaluate_model(model, X_test, y_test):
             f"Recall score of {model.__class__.__name__}: {recall_score(y_test, y_pred, average='weighted', zero_division=1)}")
         print(
             f"F1 score of {model.__class__.__name__}: {f1_score(y_test, y_pred, average='weighted', zero_division=1)}")
-        print("\nClassification Report:\n", classification_report(y_test, y_pred))
+        print("\nClassification Report:\n", classification_report(y_test, y_pred, zero_division=1))
 
 
 # Main pipeline
