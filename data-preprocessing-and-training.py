@@ -28,6 +28,12 @@ def load_data(src_file='sample_dataset.csv'):
     return dataframe
 
 
+def select_data(dataframe):
+    # Filter the dataset minimum having 100 rows per category
+    dataframe = dataframe.groupby("CATEGORY").filter(lambda x: len(x) >= 1)
+    return dataframe
+
+
 def clean_data(dataframe):
     # Check for missing data
     if any(dataframe.isnull().any()):
@@ -109,15 +115,8 @@ def train_naive_bayes(X_train, y_train):
     # Define the naive bayes classifier
     NBClass = MultinomialNB()
 
-    # Use cross-validation to evaluate the model
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    scores = cross_val_score(NBClass, X_train, y_train, cv=cv, scoring='accuracy')
-
     # Train the final model on the entire training set
     NBClass.fit(X_train, y_train)
-
-    print("Naive Bayes Cross-Validation Scores:", scores)
-    print("Mean Accuracy:", np.mean(scores))
 
     return NBClass
 
@@ -162,7 +161,8 @@ def evaluate_model(model, X_test, y_test):
 
 # Main pipeline
 data = load_data()
-cleaned_data = clean_data(data)
+selected_data = select_data(data)
+cleaned_data = clean_data(selected_data)
 X, y = preprocess_data(cleaned_data)
 
 # Split the data into training and testing sets
