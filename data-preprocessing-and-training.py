@@ -9,9 +9,7 @@ from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from sklearn import set_config
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support
-from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
 from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
@@ -87,28 +85,13 @@ def preprocess_data(dataframe):
 
 
 def train_decision_tree(X_train, y_train):
-    # Define the parameter grid for hyperparameter tuning
-    param_grid = {
-        'criterion': ['gini', 'entropy'],
-        'splitter': ['best', 'random'],
-        'max_depth': [None, 10, 20, 30, 40, 50],
-    }
+    # Create a Decision Tree classifier
+    dt_model = DecisionTreeClassifier(criterion="gini", splitter="best", random_state=42)
 
-    # Create a decision tree classifier
-    DTClass = DecisionTreeClassifier(random_state=42)
+    # Train the classifier on the training dataset
+    dt_model.fit(X_train, y_train)
 
-    # Use GridSearchCV with cross-validation to find the best hyperparameters
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
-    grid_search = GridSearchCV(DTClass, param_grid, cv=cv, scoring='accuracy')
-    grid_search.fit(X_train, y_train)
-
-    # Get the best model from the grid search
-    best_DTClass = grid_search.best_estimator_
-
-    print("Best Decision Tree Hyperparameters:", grid_search.best_params_)
-    print("Decision Tree Cross-Validation Mean Accuracy:", grid_search.best_score_)
-
-    return best_DTClass
+    return dt_model
 
 
 def train_naive_bayes(X_train, y_train):
@@ -122,14 +105,17 @@ def train_naive_bayes(X_train, y_train):
 
 
 def train_neural_network(X_train, y_train, num_classes, epochs=20, batch_size=64):
-    # Train a neural network model
+    # Build the neural network model
     model = Sequential()
-    model.add(Dense(64, activation='relu', input_shape=(X_train.shape[1],)))
-    model.add(Dense(128, activation='relu'))
-    model.add(Dense(64, activation='relu'))
+    # Input layer
+    model.add(Dense(16, activation='relu', input_shape=(X_train.shape[1],)))
+    # Hidden layers
+    model.add(Dense(32, activation='relu'))
+    # Output layer
     model.add(Dense(num_classes, activation='softmax'))
 
-    model.compile(optimizer=Adam(learning_rate=0.001), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    # Compile the model
+    model.compile(optimizer=Adam(), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
     # Train the model
     model.fit(X_train, y_train, epochs=epochs, batch_size=batch_size, validation_split=0.1)
@@ -137,26 +123,24 @@ def train_neural_network(X_train, y_train, num_classes, epochs=20, batch_size=64
     return model
 
 
-def evaluate_model(model, X_test, y_test):
-    # Initialize y_pred with None
-    y_pred = None
+def evaluate_model(model, y_pred, y_test):
+    accuracy = accuracy_score(y_test, y_pred)
+    precision, recall, _, _ = precision_recall_fscore_support(y_test, y_pred, average='weighted', zero_division=1)
 
-    # Evaluate the performance of the model
-    if isinstance(model, (DecisionTreeClassifier, MultinomialNB)):
-        y_pred = model.predict(X_test)
-    elif isinstance(model, Sequential):
-        y_pred = np.argmax(model.predict(X_test), axis=-1)
+    confusion_mat = confusion_matrix(y_test, y_pred)
 
-    if y_pred is not None:
-        accuracy = accuracy_score(y_test, y_pred)
-        precision, recall, f1, _ = precision_recall_fscore_support(y_test, y_pred, average='weighted', zero_division=1)
+    # Extract values from the confusion matrix
+    true_positive = confusion_mat[1, 1]  # Assuming binary classification (change indices for multi-class)
+    false_negative = confusion_mat[1, 0]
+    true_negative = confusion_mat[0, 0]
 
-        print(f"Accuracy score of {model.__class__.__name__}: {accuracy}")
-        print(f"Precision score of {model.__class__.__name__}: {precision}")
-        print(f"Recall score of {model.__class__.__name__}: {recall}")
-        print(f"F1 score of {model.__class__.__name__}: {f1}")
-    else:
-        print("Error: y_pred is not initialized.")
+    print(f"Accuracy score of {model}: {accuracy}")
+    print(f"Precision score of {model}: {precision}")
+    print(f"Recall score of {model}: {recall}")
+
+    print(f"True Positive of {model}: {true_positive}")
+    print(f"False Negative of {model}: {false_negative}")
+    print(f"True Negative of {model}: {true_negative}")
 
 
 # Main pipeline
@@ -170,13 +154,16 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_
 
 # Train Decision Tree
 dt_model = train_decision_tree(X_train, y_train)
-evaluate_model(dt_model, X_test, y_test)
+y_pred_dt = dt_model.predict(X_test)
+evaluate_model("Decision Tree", y_pred_dt, y_test)
 
 # Train Naive Bayes
 nb_model = train_naive_bayes(X_train, y_train)
-evaluate_model(nb_model, X_test, y_test)
+y_pred_nb = nb_model.predict(X_test)
+evaluate_model("Naive Bayes", y_pred_nb, y_test)
 
 # Train Neural Network
 num_classes = len(np.unique(y))
 nn_model = train_neural_network(X_train, y_train, num_classes)
-evaluate_model(nn_model, X_test, y_test)
+y_pred_nn = nn_model.predict(X_test)
+evaluate_model("Neural Network", y_pred_nn, y_test)
