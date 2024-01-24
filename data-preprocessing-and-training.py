@@ -81,7 +81,7 @@ def preprocess_data(dataframe):
     class_label = le.fit_transform(dataframe["CATEGORY"])
 
     # Convert TF-IDF sparse matrix to dense array
-    return tfidf_dataset.toarray(), class_label
+    return tfidf_dataset.toarray(), class_label, preprocessor, le
 
 
 def train_decision_tree(X_train, y_train):
@@ -127,27 +127,40 @@ def evaluate_model(model, y_pred, y_test):
     accuracy = accuracy_score(y_test, y_pred)
     precision, recall, _, _ = precision_recall_fscore_support(y_test, y_pred, average='weighted', zero_division=1)
 
-    confusion_mat = confusion_matrix(y_test, y_pred)
-
-    # Extract values from the confusion matrix
-    true_positive = confusion_mat[1, 1]  # Assuming binary classification (change indices for multi-class)
-    false_negative = confusion_mat[1, 0]
-    true_negative = confusion_mat[0, 0]
-
     print(f"Accuracy score of {model}: {accuracy}")
     print(f"Precision score of {model}: {precision}")
     print(f"Recall score of {model}: {recall}")
 
-    print(f"True Positive of {model}: {true_positive}")
-    print(f"False Negative of {model}: {false_negative}")
-    print(f"True Negative of {model}: {true_negative}")
+
+def predict_category(model, preprocessor, le, title):
+    # Tokenize and preprocess the input title
+    input_data = preprocessor.transform([title]).toarray()
+
+    # Make prediction using the specified model
+    if isinstance(model, DecisionTreeClassifier) or isinstance(model, MultinomialNB):
+        # Decision Tree and Naive Bayes return labels directly
+        prediction = model.predict(input_data)
+        # Get the probabilities for each class
+        probabilities = model.predict_proba(input_data)[0]
+    elif isinstance(model, Sequential):
+        # Neural Network returns probabilities, find the class with the highest probability
+        prediction = np.argmax(model.predict(input_data), axis=-1)
+        # Get the probabilities for each class
+    else:
+        raise ValueError("Unsupported model type")
+
+    # Inverse transform the label to get the original category
+    category = le.inverse_transform(prediction)
+    print(f"Predicted category: {prediction}")
+
+    return category
 
 
 # Main pipeline
 data = load_data()
 selected_data = select_data(data)
 cleaned_data = clean_data(selected_data)
-X, y = preprocess_data(cleaned_data)
+X, y, preprocessor, le = preprocess_data(cleaned_data)
 
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
@@ -166,4 +179,15 @@ evaluate_model("Naive Bayes", y_pred_nb, y_test)
 num_classes = len(np.unique(y))
 nn_model = train_neural_network(X_train, y_train, num_classes)
 y_pred_nn = nn_model.predict(X_test)
-evaluate_model("Neural Network", y_pred_nn, y_test)
+# evaluate_model("Neural Network", y_pred_nn, y_test)
+
+# Predict category
+input_title = "airport accident Alabama Airline"
+
+predicted_category_dt = predict_category(dt_model, preprocessor, le, input_title)
+predicted_category_nb = predict_category(nb_model, preprocessor, le, input_title)
+predicted_category_nn = predict_category(nn_model, preprocessor, le, input_title)
+
+print(f"Predicted category (Decision Tree): {predicted_category_dt}")
+print(f"Predicted category (Naive Bayes): {predicted_category_nb}")
+print(f"Predicted category (Neural Network): {predicted_category_nn}")
