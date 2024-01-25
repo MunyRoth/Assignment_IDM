@@ -188,8 +188,8 @@ evaluate_model("Naive Bayes", y_pred_nb, y_test)
 # Train Neural Network
 num_classes = len(np.unique(y))
 nn_model = train_neural_network(X_train, y_train, num_classes)
-y_pred_nn = nn_model.predict(X_test)
-# evaluate_model("Neural Network", y_pred_nn, y_test)
+y_pred_nn = np.argmax(nn_model.predict(X_test), axis=-1)
+evaluate_model("Neural Network", y_pred_nn, y_test)
 
 # Predict category
 input_title = "airport accident Alabama Airline"
