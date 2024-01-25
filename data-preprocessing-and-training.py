@@ -132,12 +132,12 @@ def evaluate_model(model, y_pred, y_test):
     print(f"Recall score of {model}: {recall}")
 
 
-def predict_category(model, preprocessor, le, title):
+def predict_category(model, preprocessor, le, title, top_n=3):
     # Tokenize and preprocess the input title
     input_data = preprocessor.transform([title]).toarray()
 
     # Make prediction using the specified model
-    if isinstance(model, DecisionTreeClassifier) or isinstance(model, MultinomialNB):
+    if isinstance(model, (DecisionTreeClassifier, MultinomialNB)):
         # Decision Tree and Naive Bayes return labels directly
         prediction = model.predict(input_data)
         # Get the probabilities for each class
@@ -146,12 +146,22 @@ def predict_category(model, preprocessor, le, title):
         # Neural Network returns probabilities, find the class with the highest probability
         prediction = np.argmax(model.predict(input_data), axis=-1)
         # Get the probabilities for each class
+        probabilities = model.predict(input_data)[0]
     else:
         raise ValueError("Unsupported model type")
 
+    # Sort probabilities and get the indices of the top N
+    top_indices = np.argsort(probabilities)[::-1][:top_n]
+
     # Inverse transform the label to get the original category
     category = le.inverse_transform(prediction)
-    print(f"Predicted category: {prediction}")
+
+    # Print the predicted category and top N probabilities
+    print(f"Predicted category: {category}")
+    for idx in top_indices:
+        label = le.classes_[idx]
+        prob = probabilities[idx]
+        print(f"Probability for {label}: {prob * 100:.2f}%")
 
     return category
 
